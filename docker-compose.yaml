@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=example
+      - MONGO_INITDB_DATABASE=mydb
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: backend_image:v1
+    depends_on:
+      - mongo  # No condition here
+    ports:
+      - "5000:5000"
+    deploy:
+      replicas: 2
+    environment:
+      - MONGO_URL=mongodb://root:example@mongo:27017/mydb?authSource=admin
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+
+  frontend:
+    image: frontend_image:v1
+    depends_on:
+      - backend  # No condition here
+    ports:
+      - "80:80"
+    deploy:
+      replicas: 2
+
+
+volumes:
+  mongo-data:
